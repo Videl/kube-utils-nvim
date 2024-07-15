@@ -230,6 +230,38 @@ Kubectl.apply_from_buffer = function()
 	end)
 end
 
+Kubectl.delete_from_buffer = function()
+	local context_list = fetch_contexts()
+	if not context_list then
+		return
+	end
+
+	TelescopePicker.select_from_list("Select Kubernetes Context", context_list, function(selected_context)
+		Command.run_shell_command("kubectl config use-context " .. selected_context)
+
+		local namespace_list = fetch_namespaces()
+		if not namespace_list then
+			return
+		end
+
+		TelescopePicker.select_from_list("Select Namespace", namespace_list, function(selected_namespace)
+			local file_path = vim.api.nvim_buf_get_name(0)
+			if file_path == "" then
+				Utils.log_error("No file selected")
+				return
+			end
+
+			local result, apply_err =
+				Command.run_shell_command("kubectl delete -f " .. file_path .. " -n " .. selected_namespace)
+			if result and result ~= "" then
+				print("kubectl delete successful: \n" .. result)
+			else
+				Utils.log_error("kubectl apply failed: " .. (apply_err or "Unknown error"))
+			end
+		end)
+	end)
+end
+
 Kubectl.delete_namespace = function()
 	local context_list = fetch_contexts()
 	if not context_list then
